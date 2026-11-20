@@ -1565,7 +1565,7 @@
           <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="field-hint" style="color:#ff8ea4;">Obtenir une clé ↗</a>
         </label>
         <div class="input-with-btn">
-          <input id="geminiKeyInput" type="password" class="input mono" placeholder="AIza..." autocomplete="off" />
+          <input id="geminiKeyInput" type="password" class="input mono" placeholder="AQ.... ou AIza..." autocomplete="off" />
           <button id="toggleKeyVisibilityBtn" type="button" class="btn btn-sm" title="Afficher/Masquer">Voir</button>
         </div>
       </div>
@@ -2060,7 +2060,8 @@
         el.fetchModelsBtn.textContent = 'Chargement...';
         try {
           const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+            'https://generativelanguage.googleapis.com/v1beta/models',
+            { headers: { 'x-goog-api-key': key } }
           );
           const data = await res.json();
           if (!res.ok) {
@@ -2553,11 +2554,14 @@ Note : "known" vaut true si c'est un titre relativement connu/classique, false s
         }
 
         const model = state.geminiModel || DEFAULT_GEMINI_MODEL;
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(state.geminiKey)}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': state.geminiKey
+          },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
