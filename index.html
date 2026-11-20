@@ -2005,10 +2005,73 @@
         el.settingsModal.classList.remove('open');
       }
 
+      function sanitizeSecret(val) {
+        return String(val || '').trim().replace(/^["']+|["']+$/g, '');
+      }
+
+      function isVertexExpressKey(key) {
+        return /^AQ\./.test(sanitizeSecret(key));
+      }
+
+      async function requestGeminiRaw({ key, model, body }) {
+        const cleanKey = sanitizeSecret(key);
+        const encodedModel = encodeURIComponent(model);
+        const vertexFirst = isVertexExpressKey(cleanKey);
+
+        const attempts = vertexFirst
+          ? [
+              {
+                provider: 'Vertex AI Express',
+                url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodedModel}:generateContent?key=${encodeURIComponent(cleanKey)}`,
+                headers: { 'Content-Type': 'application/json' }
+              },
+              {
+                provider: 'Google AI Studio',
+                url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
+              }
+            ]
+          : [
+              {
+                provider: 'Google AI Studio',
+                url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
+              },
+              {
+                provider: 'Vertex AI Express',
+                url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodedModel}:generateContent?key=${encodeURIComponent(cleanKey)}`,
+                headers: { 'Content-Type': 'application/json' }
+              }
+            ];
+
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+          const attempt = attempts[i];
+          const res = await fetch(attempt.url, {
+            method: 'POST',
+            headers: attempt.headers,
+            body: JSON.stringify(body)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            return { data, provider: attempt.provider };
+          }
+          const msg = data.error?.message || `Erreur ${attempt.provider} (${res.status})`;
+          lastError = new Error(msg);
+          const isKeyRejection =
+            res.status === 400 || res.status === 401 || res.status === 403 ||
+            /API key not valid|API_KEY_INVALID|invalid.*key/i.test(msg);
+          if (!isKeyRejection) {
+            throw lastError;
+          }
+        }
+        throw lastError || new Error('Clé API Gemini invalide.');
+      }
+
       function saveSettings() {
-        const key = el.geminiKeyInput.value.trim();
+        const key = sanitizeSecret(el.geminiKeyInput.value);
         const model = el.geminiModelInput.value.trim() || DEFAULT_GEMINI_MODEL;
-        const clientId = el.googleClientIdInput.value.trim();
+        const clientId = sanitizeSecret(el.googleClientIdInput.value);
 
         if (key) localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, key);
         else localStorage.removeItem(STORAGE_KEYS.GEMINI_KEY);
@@ -2051,14 +2114,35 @@
       }
 
       async function fetchAvailableGeminiModels() {
-        const key = el.geminiKeyInput.value.trim() || state.geminiKey;
+        const key = sanitizeSecret(el.geminiKeyInput.value || state.geminiKey);
         if (!key) {
           showToast('Saisissez d\'abord votre clé API Gemini.', 'warning');
           return;
         }
         el.fetchModelsBtn.disabled = true;
-        el.fetchModelsBtn.textContent = 'Chargement...';
+        el.fetchModelsBtn.textContent = 'Vérification...';
         try {
+          if (isVertexExpressKey(key)) {
+            const testModel = el.geminiModelInput.value.trim() || DEFAULT_GEMINI_MODEL;
+            const { provider } = await requestGeminiRaw({
+              key,
+              model: testModel,
+              body: {
+                contents: [{ role: 'user', parts: [{ text: 'OK' }] }],
+                generationConfig: { maxOutputTokens: 4 }
+              }
+            });
+            const vertexPresets = [
+              'gemini-2.5-flash',
+              'gemini-2.5-pro',
+              'gemini-2.5-flash-lite',
+              'gemini-2.0-flash'
+            ];
+            renderModelPresets(vertexPresets);
+            showToast(`Clé validée via ${provider} avec ${testModel} !`, 'success');
+            return;
+          }
+
           const res = await fetch(
             'https://generativelanguage.googleapis.com/v1beta/models',
             { headers: { 'x-goog-api-key': key } }
@@ -2080,7 +2164,7 @@
             showToast(`${validModels.length} modèles compatibles chargés.`, 'success');
           }
         } catch (err) {
-          showToast(`Impossible de lister les modèles : ${err.message}`, 'error');
+          showToast(`Échec de vérification : ${err.message}`, 'error', 6000);
         } finally {
           el.fetchModelsBtn.disabled = false;
           el.fetchModelsBtn.textContent = 'Vérifier mes modèles';
@@ -2554,27 +2638,17 @@ Note : "known" vaut true si c'est un titre relativement connu/classique, false s
         }
 
         const model = state.geminiModel || DEFAULT_GEMINI_MODEL;
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': state.geminiKey
-          },
-          body: JSON.stringify({
+        const { data } = await requestGeminiRaw({
+          key: state.geminiKey,
+          model,
+          body: {
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.85,
               responseMimeType: 'application/json'
             }
-          })
+          }
         });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error?.message || `Erreur Gemini API (${res.status})`);
-        }
 
         const candidateText = data.candidates?.[0]?.content?.parts
           ?.map((p) => p.text || '')
