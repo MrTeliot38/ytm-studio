@@ -1565,7 +1565,7 @@
           <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="field-hint" style="color:#ff8ea4;">Obtenir une clé ↗</a>
         </label>
         <div class="input-with-btn">
-          <input id="geminiKeyInput" type="password" class="input mono" placeholder="AQ.... ou AIza..." autocomplete="off" />
+          <input id="geminiKeyInput" type="password" class="input mono" placeholder="AQ.... ou AIza..." autocomplete="new-password" />
           <button id="toggleKeyVisibilityBtn" type="button" class="btn btn-sm" title="Afficher/Masquer">Voir</button>
         </div>
       </div>
@@ -1576,7 +1576,7 @@
           <span>Modèle Gemini</span>
           <button id="fetchModelsBtn" type="button" class="btn btn-sm" style="padding: 3px 9px; font-size: 0.72rem;">Vérifier mes modèles</button>
         </label>
-        <input id="geminiModelInput" type="text" class="input mono" placeholder="gemini-2.5-flash" />
+        <input id="geminiModelInput" type="text" class="input mono" placeholder="gemini-3.1-flash-lite-preview" />
         <div id="modelPresets" class="chip-group" style="margin-top: 8px;"></div>
       </div>
 
@@ -1637,12 +1637,13 @@
         LAST_CRITERIA: 'ytm_studio_last_criteria'
       };
 
-      const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+      const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
       const MODEL_PRESETS = [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-2.0-flash',
-        'gemini-flash-latest'
+        'gemini-3.1-flash-lite-preview',
+        'gemini-3.8-flash',
+        'gemini-3.7-flash',
+        'gemini-flash-latest',
+        'gemini-pro-latest'
       ];
 
       const OPTIONS = {
@@ -1960,7 +1961,12 @@
       ========================================================= */
       function loadSettings() {
         state.geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
-        state.geminiModel = localStorage.getItem(STORAGE_KEYS.GEMINI_MODEL) || DEFAULT_GEMINI_MODEL;
+        const savedModel = localStorage.getItem(STORAGE_KEYS.GEMINI_MODEL) || DEFAULT_GEMINI_MODEL;
+        // Migration automatique si l'ancien modèle par défaut déprécié était enregistré
+        state.geminiModel = savedModel === 'gemini-2.5-flash' ? DEFAULT_GEMINI_MODEL : savedModel;
+        if (savedModel === 'gemini-2.5-flash') {
+          localStorage.setItem(STORAGE_KEYS.GEMINI_MODEL, DEFAULT_GEMINI_MODEL);
+        }
         state.googleClientId = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID) || '';
         updateHeaderStatus();
       }
@@ -2036,28 +2042,23 @@
         const encodedModel = encodeURIComponent(model);
         const isAQ = isVertexExpressKey(cleanKey);
 
-        // Les clés AQ. fonctionnent sur Vertex AI Express (et parfois AI Studio).
-        // Les clés AIza... fonctionnent uniquement sur Google AI Studio (jamais sur aiplatform).
-        const attempts = isAQ
-          ? [
-              {
-                provider: 'Vertex AI Express',
-                url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodedModel}:generateContent?key=${encodeURIComponent(cleanKey)}`,
-                headers: { 'Content-Type': 'application/json' }
-              },
-              {
-                provider: 'Google AI Studio',
-                url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
-                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
-              }
-            ]
-          : [
-              {
-                provider: 'Google AI Studio',
-                url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
-                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
-              }
-            ];
+        // Les clés Google AI Studio (AQ. et AIza...) utilisent generativelanguage.googleapis.com en priorité.
+        // Repli vers aiplatform.googleapis.com uniquement si une clé AQ. Vertex AI Express est rejetée par AI Studio.
+        const attempts = [
+          {
+            provider: 'Google AI Studio',
+            url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
+          }
+        ];
+
+        if (isAQ) {
+          attempts.push({
+            provider: 'Vertex AI Express',
+            url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodedModel}:generateContent?key=${encodeURIComponent(cleanKey)}`,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
 
         let primaryError = null;
         for (let i = 0; i < attempts.length; i++) {
@@ -2075,9 +2076,10 @@
           if (!primaryError) {
             primaryError = new Error(`[${attempt.provider}] ${msg}`);
           }
+          // Ne tenter le repli Vertex AI que si la clé elle-même a été rejetée (401/API key not valid)
           const isKeyRejection =
-            res.status === 400 || res.status === 401 || res.status === 403 ||
-            /API key not valid|API_KEY_INVALID|invalid.*key/i.test(msg);
+            res.status === 401 ||
+            /API key not valid|API_KEY_INVALID/i.test(msg);
           if (!isKeyRejection) {
             throw new Error(`[${attempt.provider}] ${msg}`);
           }
@@ -2140,46 +2142,35 @@
         el.fetchModelsBtn.disabled = true;
         el.fetchModelsBtn.textContent = 'Vérification...';
         try {
-          if (isVertexExpressKey(key)) {
-            const testModel = el.geminiModelInput.value.trim() || DEFAULT_GEMINI_MODEL;
-            const { provider } = await requestGeminiRaw({
-              key,
-              model: testModel,
-              body: {
-                contents: [{ role: 'user', parts: [{ text: 'OK' }] }],
-                generationConfig: { maxOutputTokens: 4 }
-              }
-            });
-            const vertexPresets = [
-              'gemini-2.5-flash',
-              'gemini-2.5-pro',
-              'gemini-2.5-flash-lite',
-              'gemini-2.0-flash'
-            ];
-            renderModelPresets(vertexPresets);
-            showToast(`Clé validée via ${provider} avec ${testModel} !`, 'success');
-            return;
-          }
-
           const res = await fetch(
             'https://generativelanguage.googleapis.com/v1beta/models',
             { headers: { 'x-goog-api-key': key } }
           );
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
             throw new Error(data.error?.message || `Erreur HTTP ${res.status}`);
           }
-          const validModels = (data.models || [])
+          const excludedPattern = /(tts|image|transcribe|robotics|computer-use|embedding|aqa|lyria|nano-banana|deep-research|customtools|^gemini-2\.5-)/i;
+          const allGenModels = (data.models || [])
             .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
             .map((m) => m.name.replace(/^models\//, ''))
-            .filter((name) => name.includes('gemini'))
-            .slice(0, 10);
+            .filter((name) => name.includes('gemini'));
+
+          const preferred = allGenModels
+            .filter((name) => !excludedPattern.test(name))
+            .reverse();
+          const validModels = (preferred.length ? preferred : allGenModels).slice(0, 12);
 
           if (validModels.length === 0) {
             showToast('Aucun modèle Gemini compatible trouvé sur cette clé.', 'warning');
           } else {
+            if (!el.geminiModelInput.value.trim() || el.geminiModelInput.value.trim() === 'gemini-2.5-flash') {
+              el.geminiModelInput.value = validModels.includes(DEFAULT_GEMINI_MODEL)
+                ? DEFAULT_GEMINI_MODEL
+                : validModels[0];
+            }
             renderModelPresets(validModels);
-            showToast(`${validModels.length} modèles compatibles chargés.`, 'success');
+            showToast(`Clé valide ! ${validModels.length} modèles compatibles chargés.`, 'success');
           }
         } catch (err) {
           showToast(`Échec de vérification : ${err.message}`, 'error', 6000);
@@ -2669,7 +2660,8 @@ Note : "known" vaut true si c'est un titre relativement connu/classique, false s
         });
 
         const candidateText = data.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || '')
+          ?.filter((p) => !p.thought && typeof p.text === 'string')
+          .map((p) => p.text)
           .join('')
           .trim();
 
