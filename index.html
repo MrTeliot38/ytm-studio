@@ -2013,12 +2013,32 @@
         return /^AQ\./.test(sanitizeSecret(key));
       }
 
+      function validateGeminiKeyFormat(cleanKey) {
+        if (!cleanKey) {
+          return 'Clé API Gemini manquante.';
+        }
+        if (/\.apps\.googleusercontent\.com$/i.test(cleanKey)) {
+          return 'Vous avez collé un Client ID Google OAuth (.apps.googleusercontent.com) dans le champ Clé API Gemini.';
+        }
+        if (/^GOCSPX-/.test(cleanKey)) {
+          return 'Vous avez collé un Code secret client OAuth (GOCSPX-) au lieu d\'une clé API Gemini (AIza... ou AQ....).';
+        }
+        return null;
+      }
+
       async function requestGeminiRaw({ key, model, body }) {
         const cleanKey = sanitizeSecret(key);
-        const encodedModel = encodeURIComponent(model);
-        const vertexFirst = isVertexExpressKey(cleanKey);
+        const formatError = validateGeminiKeyFormat(cleanKey);
+        if (formatError) {
+          throw new Error(formatError);
+        }
 
-        const attempts = vertexFirst
+        const encodedModel = encodeURIComponent(model);
+        const isAQ = isVertexExpressKey(cleanKey);
+
+        // Les clés AQ. fonctionnent sur Vertex AI Express (et parfois AI Studio).
+        // Les clés AIza... fonctionnent uniquement sur Google AI Studio (jamais sur aiplatform).
+        const attempts = isAQ
           ? [
               {
                 provider: 'Vertex AI Express',
@@ -2036,15 +2056,10 @@
                 provider: 'Google AI Studio',
                 url: `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent`,
                 headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey }
-              },
-              {
-                provider: 'Vertex AI Express',
-                url: `https://aiplatform.googleapis.com/v1/publishers/google/models/${encodedModel}:generateContent?key=${encodeURIComponent(cleanKey)}`,
-                headers: { 'Content-Type': 'application/json' }
               }
             ];
 
-        let lastError = null;
+        let primaryError = null;
         for (let i = 0; i < attempts.length; i++) {
           const attempt = attempts[i];
           const res = await fetch(attempt.url, {
@@ -2057,15 +2072,17 @@
             return { data, provider: attempt.provider };
           }
           const msg = data.error?.message || `Erreur ${attempt.provider} (${res.status})`;
-          lastError = new Error(msg);
+          if (!primaryError) {
+            primaryError = new Error(`[${attempt.provider}] ${msg}`);
+          }
           const isKeyRejection =
             res.status === 400 || res.status === 401 || res.status === 403 ||
             /API key not valid|API_KEY_INVALID|invalid.*key/i.test(msg);
           if (!isKeyRejection) {
-            throw lastError;
+            throw new Error(`[${attempt.provider}] ${msg}`);
           }
         }
-        throw lastError || new Error('Clé API Gemini invalide.');
+        throw primaryError || new Error('Clé API Gemini invalide.');
       }
 
       function saveSettings() {
@@ -2115,8 +2132,9 @@
 
       async function fetchAvailableGeminiModels() {
         const key = sanitizeSecret(el.geminiKeyInput.value || state.geminiKey);
-        if (!key) {
-          showToast('Saisissez d\'abord votre clé API Gemini.', 'warning');
+        const formatError = validateGeminiKeyFormat(key);
+        if (formatError) {
+          showToast(formatError, 'warning', 5500);
           return;
         }
         el.fetchModelsBtn.disabled = true;
