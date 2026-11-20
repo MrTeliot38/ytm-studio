@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTM Studio — Générateur IA de Playlists YouTube Music</title>
+  <meta name="description" content="Créez des playlists YouTube Music sur-mesure grâce à Gemini AI et exportez-les en 1 clic sur votre compte YouTube Music." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg-base: #09090d;
+      --bg-elevated: #11121a;
+      --bg-card: rgba(20, 21, 31, 0.82);
+      --bg-input: rgba(12, 13, 20, 0.9);
+      --bg-chip: rgba(255, 255, 255, 0.045);
+      --bg-chip-hover: rgba(255, 255, 255, 0.09);
+
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-focus: rgba(255, 51, 92, 0.65);
+
+      --text-primary: #f5f5f9;
+      --text-secondary: #a1a4b8;
+      --text-muted: #6c7086;
+
+      --accent: #ff2e55;
+      --accent-hover: #ff476a;
+      --accent-soft: rgba(255, 46, 85, 0.14);
+      --accent-glow: rgba(255, 46, 85, 0.35);
+
+      --accent-2: #8b5cf6;
+      --accent-2-soft: rgba(139, 92, 246, 0.16);
+
+      --success: #22c55e;
+      --success-soft: rgba(34, 197, 94, 0.15);
+      --warning: #f59e0b;
+      --warning-soft: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.15);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+
+      --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.4);
+      --transition: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      color-scheme: dark;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.55;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse 65% 45% at 15% -5%, rgba(255, 46, 85, 0.14), transparent 65%),
+        radial-gradient(ellipse 55% 40% at 88% 8%, rgba(139, 92, 246, 0.13), transparent 60%),
+        radial-gradient(ellipse 50% 45% at 50% 105%, rgba(255, 46, 85, 0.08), transparent 65%);
+      background-attachment: fixed;
+    }
+
+    h1, h2, h3, .font-display {
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    button, input, textarea, select {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.24);
+    }
+
+    /* Header */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: rgba(9, 9, 13, 0.78);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .topbar-inner {
+      max-width: 1420px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 20px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .brand-logo svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .brand-sub {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Status pills */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--bg-chip);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .status-pill.ok {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(34, 197, 94, 0.1);
+      color: #bbf7d0;
+    }
+    .status-pill.ok .status-dot {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-pill.warn {
+      border-color: rgba(245, 158, 11, 0.35);
+      background: rgba(245, 158, 11, 0.1);
+      color: #fde68a;
+    }
+    .status-pill.warn .status-dot {
+      background: var(--warning);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 1px solid var(--border-medium);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #e11d48);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 22px var(--accent-glow);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--accent-hover), #f43f5e);
+      border-color: transparent;
+      box-shadow: 0 8px 28px rgba(255, 46, 85, 0.48);
+    }
+
+    .btn-violet {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.32);
+    }
+
+    .btn-violet:hover:not(:disabled) {
+      background: linear-gradient(135deg, #8b5cf6, #818cf8);
+      border-color: transparent;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
+    }
+
+    .btn-danger-ghost {
+      background: transparent;
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .btn-danger-ghost:hover:not(:disabled) {
+      background: var(--danger-soft);
+      border-color: rgba(239, 68, 68, 0.55);
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 0.78rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-lg {
+      padding: 13px 22px;
+      font-size: 0.96rem;
+      border-radius: var(--radius-md);
+    }
+
+    .btn-icon {
+      padding: 7px;
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Main layout */
+    .container {
+      max-width: 1420px;
+      margin: 0 auto;
+      padding: 22px 20px 64px;
+    }
+
+    .setup-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(255, 46, 85, 0.12), rgba(139, 92, 246, 0.12));
+      border: 1px solid rgba(255, 46, 85, 0.28);
+    }
+
+    .setup-banner.hidden {
+      display: none;
+    }
+
+    .setup-banner-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+    }
+
+    .studio-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    @media (max-width: 1040px) {
+      .studio-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .card + .card {
+      margin-top: 18px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--accent-soft);
+      color: #ff809a;
+      border: 1px solid rgba(255, 46, 85, 0.3);
+    }
+
+    .step-badge.violet {
+      background: var(--accent-2-soft);
+      color: #c4b5fd;
+      border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .card-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+    }
+
+    /* Profiles bar */
+    .profiles-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 20px;
+    }
+
+    .profiles-bar-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 4px;
+    }
+
+    .profiles-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+
+    /* Form Controls */
+    .section-block {
+      margin-bottom: 20px;
+    }
+    .section-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 9px;
+    }
+
+    .field-hint {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .input, .select, .textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 10px 13px;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .input:focus, .select:focus, .textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(255, 46, 85, 0.16);
+    }
+
+    .input::placeholder, .textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .select {
+      cursor: pointer;
+      min-width: 180px;
+      flex: 1;
+    }
+
+    .textarea {
+      resize: vertical;
+      min-height: 82px;
+      line-height: 1.5;
+    }
+
+    /* Chips */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--bg-chip);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .chip:hover {
+      background: var(--bg-chip-hover);
+      color: var(--text-primary);
+      border-color: var(--border-medium);
+    }
+
+    .chip.active {
+      background: var(--accent-soft);
+      border-color: rgba(255, 46, 85, 0.6);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(255, 46, 85, 0.2);
+    }
+
+    .chip.violet.active {
+      background: var(--accent-2-soft);
+      border-color: rgba(139, 92, 246, 0.65);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(139, 92, 246, 0.22);
+    }
+
+    /* Sliders */
+    .sliders-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .sliders-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-card {
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .slider-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .slider-title {
+      font-size: 0.83rem;
+      font-weight: 600;
+    }
+
+    .slider-value {
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: var(--radius-full);
+      background: var(--accent-soft);
+      color: #ff9ab0;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--accent);
+      box-shadow: 0 2px 10px rgba(255, 46, 85, 0.45);
+      cursor: pointer;
+      transition: transform 140ms ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--accent);
+      box-shadow: 0 2px 10px rgba(255, 46, 85, 0.45);
+      cursor: pointer;
+    }
+
+    .slider-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 7px;
+    }
+
+    /* Toggle Switch */
+    .liked-box {
+      padding: 15px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .toggle-track::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      border-radius: 50%;
+      background: #fff;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--accent);
+    }
+
+    .toggle-switch input:checked + .toggle-track::before {
+      transform: translateX(20px);
+    }
+
+    .liked-details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .liked-details.hidden {
+      display: none;
+    }
+
+    .liked-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .radio-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .radio-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .radio-pill input {
+      accent-color: var(--accent);
+    }
+
+    /* Two column sub-grid */
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sticky Preview Column */
+    .preview-column {
+      position: sticky;
+      top: 84px;
+    }
+
+    @media (max-width: 1040px) {
+      .preview-column {
+        position: static;
+      }
+    }
+
+    /* Empty Preview State */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255, 46, 85, 0.14), rgba(139, 92, 246, 0.14));
+      border: 1px solid var(--border-subtle);
+      display: grid;
+      place-items: center;
+      color: #ff7a96;
+    }
+
+    .empty-state h3 {
+      color: var(--text-primary);
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* Playlist Metadata Editor */
+    .playlist-meta-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.028);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 14px;
+    }
+
+    .playlist-meta-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    @media (max-width: 520px) {
+      .playlist-meta-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Track List */
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 460px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 16px;
+    }
+
+    .track-item {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      transition: var(--transition);
+    }
+
+    .track-item:hover {
+      background: rgba(255, 255, 255, 0.055);
+      border-color: var(--border-medium);
+    }
+
+    .track-item.status-added {
+      border-color: rgba(34, 197, 94, 0.45);
+      background: rgba(34, 197, 94, 0.08);
+    }
+
+    .track-item.status-searching {
+      border-color: rgba(139, 92, 246, 0.55);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .track-item.status-failed {
+      border-color: rgba(245, 158, 11, 0.45);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .track-index {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .track-info {
+      min-width: 0;
+    }
+
+    .track-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-artist {
+      font-size: 0.79rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-reason {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .track-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .mini-badge {
+      font-size: 0.67rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
+    .mini-badge.discovery {
+      background: rgba(139, 92, 246, 0.18);
+      color: #c4b5fd;
+    }
+
+    .mini-badge.liked {
+      background: rgba(255, 46, 85, 0.18);
+      color: #ff8ea4;
+    }
+
+    .track-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Refinement Box */
+    .refine-box {
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(139, 92, 246, 0.07);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      margin-bottom: 16px;
+    }
+
+    .refine-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 520px) {
+      .refine-row {
+        flex-direction: column;
+      }
+    }
+
+    /* Progress Box */
+    .progress-box {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-medium);
+      margin-top: 14px;
+    }
+
+    .progress-box.hidden {
+      display: none;
+    }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #a855f7);
+      transition: width 260ms ease;
+    }
+
+    /* Result Box */
+    .result-box {
+      margin-top: 14px;
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(16, 185, 129, 0.07));
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+
+    .result-box.hidden {
+      display: none;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(4, 5, 9, 0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #13141f;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+      transform: translateY(12px) scale(0.98);
+      transition: transform 200ms ease;
+    }
+
+    .modal-backdrop.open .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .input-with-btn {
+      display: flex;
+      gap: 8px;
+    }
+
+    .guide-details {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.81rem;
+      color: var(--text-secondary);
+    }
+
+    .guide-details summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .guide-details ol {
+      margin-top: 10px;
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .origin-copy-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(380px, calc(100vw - 36px));
+    }
+
+    .toast {
+      padding: 12px 15px;
+      border-radius: var(--radius-md);
+      background: #1b1d2b;
+      border: 1px solid var(--border-medium);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      font-size: 0.84rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: toastIn 220ms ease;
+    }
+
+    .toast.success { border-color: rgba(34, 197, 94, 0.5); }
+    .toast.error { border-color: rgba(239, 68, 68, 0.55); }
+    .toast.warning { border-color: rgba(245, 158, 11, 0.55); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 18px 0;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 34px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+      .topbar-inner {
+        padding: 10px 14px;
+      }
+      .container {
+        padding: 14px 12px 48px;
+      }
+      .card {
+        padding: 16px;
+        border-radius: var(--radius-lg);
+      }
+      .brand-sub {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- TOP NAVIGATION -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">YTM Studio</div>
+          <div class="brand-sub">Créateur IA de playlists YouTube Music</div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <span id="geminiStatusPill" class="status-pill warn" title="Statut de la configuration Gemini">
+          <span class="status-dot"></span>
+          <span id="geminiStatusText">Gemini non configuré</span>
+        </span>
+
+        <button id="googleAuthBtn" type="button" class="btn btn-sm">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"/>
+          </svg>
+          <span id="googleAuthBtnText">Connexion YouTube</span>
+        </button>
+
+        <button id="openSettingsBtn" type="button" class="btn btn-sm">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Paramètres API</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Setup Reminder Banner -->
+    <div id="setupBanner" class="setup-banner hidden">
+      <div class="setup-banner-text">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff7a96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div>
+          <strong>Configuration requise :</strong> renseignez votre clé API Gemini et votre Client ID Google OAuth dans les paramètres (stockés uniquement dans votre navigateur).
+        </div>
+      </div>
+      <button id="bannerSettingsBtn" type="button" class="btn btn-primary btn-sm">Configurer maintenant</button>
+    </div>
+
+    <div class="studio-grid">
+      <!-- LEFT COLUMN: CONFIGURATION & CRITERIA -->
+      <section aria-label="Critères de génération">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="step-badge">Étape 1</span>
+              <h1 class="card-title">Direction artistique & Critères</h1>
+            </div>
+            <button id="resetCriteriaBtn" type="button" class="btn btn-sm" title="Réinitialiser tous les critères">
+              Réinitialiser
+            </button>
+          </div>
+
+          <!-- Saved Profiles Bar -->
+          <div class="profiles-bar">
+            <div class="profiles-bar-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Profils
+            </div>
+            <div class="profiles-controls">
+              <select id="profileSelect" class="select" aria-label="Choisir un profil sauvegardé">
+                <option value="">— Sélectionner un profil —</option>
+              </select>
+              <button id="loadProfileBtn" type="button" class="btn btn-sm" title="Charger le profil sélectionné">Charger</button>
+              <button id="saveProfileBtn" type="button" class="btn btn-sm btn-violet" title="Sauvegarder les critères actuels">Sauvegarder</button>
+              <button id="deleteProfileBtn" type="button" class="btn btn-sm btn-danger-ghost" title="Supprimer le profil sélectionné">Supprimer</button>
+            </div>
+          </div>
+
+          <!-- Humeurs -->
+          <div class="section-block">
+            <div class="field-label">
+              <span>Humeurs</span>
+              <span class="field-hint">Sélection multiple</span>
+            </div>
+            <div id="moodsGroup" class="chip-group"></div>
+          </div>
+
+          <!-- Contexte -->
+          <div class="section-block">
+            <div class="field-label">
+              <span>Contexte</span>
+              <span class="field-hint">Où et quand écoutez-vous ?</span>
+            </div>
+            <div id="contextGroup" class="chip-group"></div>
+          </div>
+
+          <!-- Objectif -->
+          <div class="section-block">
+            <div class="field-label">
+              <span>Objectif</span>
+              <span class="field-hint">Effet recherché</span>
+            </div>
+            <div id="goalGroup" class="chip-group"></div>
+          </div>
+
+          <!-- Sliders: Énergie/Tempo & Connus vs Découvertes -->
+          <div class="section-block">
+            <div class="sliders-grid">
+              <div class="slider-card">
+                <div class="slider-header">
+                  <label for="energySlider" class="slider-title">Énergie / Tempo</label>
+                  <span id="energyValueBadge" class="slider-value">Modéré (50%)</span>
+                </div>
+                <input id="energySlider" type="range" min="0" max="100" value="50" />
+                <div class="slider-scale">
+                  <span>Calme / Lent</span>
+                  <span>Modéré</span>
+                  <span>Explosif / Rapide</span>
+                </div>
+              </div>
+
+              <div class="slider-card">
+                <div class="slider-header">
+                  <label for="discoverySlider" class="slider-title">Connus vs Découvertes</label>
+                  <span id="discoveryValueBadge" class="slider-value">Équilibré (50%)</span>
+                </div>
+                <input id="discoverySlider" type="range" min="0" max="100" value="50" />
+                <div class="slider-scale">
+                  <span>100% Connus</span>
+                  <span>50 / 50</span>
+                  <span>100% Découvertes</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Titres aimés YouTube Music -->
+          <div class="section-block">
+            <div class="liked-box">
+              <div class="toggle-row">
+                <div>
+                  <div style="font-size: 0.88rem; font-weight: 600;">Utiliser mes Titres aimés (YouTube Music)</div>
+                  <div class="field-hint">Analyse vos vidéos aimées de la catégorie Musique pour personnaliser la sélection</div>
+                </div>
+                <label class="toggle-switch" aria-label="Activer les titres aimés">
+                  <input id="useLikedToggle" type="checkbox" />
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+
+              <div id="likedDetails" class="liked-details hidden">
+                <div class="liked-meta">
+                  <span id="likedStatusText">Connectez votre compte YouTube pour charger vos titres aimés.</span>
+                  <button id="refreshLikedBtn" type="button" class="btn btn-sm">Charger / Rafraîchir</button>
+                </div>
+                <div class="radio-pills">
+                  <label class="radio-pill">
+                    <input type="radio" name="likedMode" value="mix" checked />
+                    <span>Inclure certains titres aimés + morceaux similaires</span>
+                  </label>
+                  <label class="radio-pill">
+                    <input type="radio" name="likedMode" value="inspire" />
+                    <span>S'inspirer uniquement de mes goûts (sans doublons)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Époques & Langues -->
+          <div class="section-block">
+            <div class="field-label">
+              <span>Époques</span>
+              <span class="field-hint">Laissez vide pour toutes époques</span>
+            </div>
+            <div id="erasGroup" class="chip-group"></div>
+          </div>
+
+          <div class="section-block">
+            <div class="field-label">
+              <span>Langues</span>
+              <span class="field-hint">Laissez vide pour toutes langues</span>
+            </div>
+            <div id="languagesGroup" class="chip-group"></div>
+          </div>
+
+          <!-- Nombre de titres -->
+          <div class="section-block">
+            <div class="slider-card">
+              <div class="slider-header">
+                <label for="trackCountSlider" class="slider-title">Nombre de titres</label>
+                <span id="trackCountBadge" class="slider-value">15 titres</span>
+              </div>
+              <input id="trackCountSlider" type="range" min="5" max="50" step="1" value="15" />
+              <div class="slider-scale">
+                <span>5 titres</span>
+                <span>25 titres</span>
+                <span>50 titres (quota API élevé)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exclusions strictes -->
+          <div class="section-block">
+            <label for="exclusionsInput" class="field-label">
+              <span>Exclusions strictes</span>
+              <span class="field-hint">Artistes, genres, mots-clés ou versions à bannir</span>
+            </label>
+            <input
+              id="exclusionsInput"
+              type="text"
+              class="input"
+              placeholder="Ex : Pas de métal, pas de Jul, aucune version live, pas de remix sped-up..."
+            />
+          </div>
+
+          <!-- Zone de texte libre -->
+          <div class="section-block">
+            <label for="freeTextInput" class="field-label">
+              <span>Précisez votre pensée (texte libre)</span>
+              <span class="field-hint">Ambiance, références d'artistes, scénario...</span>
+            </label>
+            <textarea
+              id="freeTextInput"
+              class="textarea"
+              placeholder="Ex : Une ambiance de route nocturne sous la pluie, entre synthwave analogique et électro-pop française, avec une montée progressive d'énergie puis un atterrissage doux sur les 3 derniers morceaux..."
+            ></textarea>
+          </div>
+
+          <div class="divider"></div>
+
+          <button id="generateBtn" type="button" class="btn btn-primary btn-lg" style="width: 100%;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span id="generateBtnText">Générer la prévisualisation</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: PREVIEW & YOUTUBE MUSIC CREATION -->
+      <section class="preview-column" aria-label="Prévisualisation et export YouTube Music">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="step-badge violet">Étape 2</span>
+              <h2 class="card-title">Prévisualisation & Création</h2>
+            </div>
+            <span id="previewCountPill" class="status-pill hidden">
+              <span id="previewCountText">0 titres</span>
+            </span>
+          </div>
+
+          <!-- Empty State -->
+          <div id="previewEmptyState" class="empty-state">
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+            </div>
+            <h3>Votre playlist apparaîtra ici</h3>
+            <p>
+              Choisissez vos critères à gauche puis lancez la génération. Vous pourrez supprimer des titres, affiner la liste avec Gemini, puis créer la playlist sur YouTube Music en 1 clic.
+            </p>
+          </div>
+
+          <!-- Active Preview Content -->
+          <div id="previewContent" class="hidden">
+            <!-- Playlist Metadata -->
+            <div class="playlist-meta-editor">
+              <div class="playlist-meta-row">
+                <input id="playlistTitleInput" type="text" class="input" placeholder="Titre de la playlist" aria-label="Titre de la playlist" />
+                <select id="playlistPrivacySelect" class="select" style="min-width: 145px;" aria-label="Visibilité de la playlist">
+                  <option value="private">Privée</option>
+                  <option value="unlisted">Non répertoriée</option>
+                  <option value="public">Publique</option>
+                </select>
+              </div>
+              <input id="playlistDescInput" type="text" class="input" placeholder="Description de la playlist" aria-label="Description de la playlist" />
+            </div>
+
+            <!-- Tracks List -->
+            <div id="trackList" class="track-list" role="list"></div>
+
+            <!-- Adjustment / Regeneration -->
+            <div class="refine-box">
+              <div class="field-label" style="margin-bottom: 2px;">
+                <span>Ajuster ou régénérer avec Gemini</span>
+                <span class="field-hint">Conserve vos suppressions</span>
+              </div>
+              <div class="refine-row">
+                <input
+                  id="refineInput"
+                  type="text"
+                  class="input"
+                  placeholder="Ex : Remplace les titres lents par plus de groove, ajoute 3 artistes français..."
+                />
+                <button id="refineBtn" type="button" class="btn btn-violet">
+                  <span id="refineBtnText">Ajuster</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2 Action: Create on YouTube Music -->
+            <button id="createPlaylistBtn" type="button" class="btn btn-primary btn-lg" style="width: 100%;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+              </svg>
+              <span id="createPlaylistBtnText">Créer la playlist sur YouTube Music</span>
+            </button>
+
+            <!-- Progress Box -->
+            <div id="creationProgressBox" class="progress-box hidden">
+              <div class="progress-head">
+                <span id="progressStatusLabel">Préparation...</span>
+                <strong id="progressPercentLabel" class="mono">0%</strong>
+              </div>
+              <div class="progress-bar-bg">
+                <div id="progressBarFill" class="progress-bar-fill"></div>
+              </div>
+            </div>
+
+            <!-- Completion Result Box -->
+            <div id="creationResultBox" class="result-box hidden">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <strong id="resultHeadline" style="font-size: 0.98rem;">Playlist créée sur YouTube Music !</strong>
+              </div>
+              <p id="resultSubtext" style="font-size: 0.83rem; color: var(--text-secondary);"></p>
+              <div class="result-actions">
+                <a id="ytmDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-success">
+                  Ouvrir dans YouTube Music ↗
+                </a>
+                <a id="ytClassicLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-sm">
+                  Voir sur YouTube
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer-note">
+      YTM Studio fonctionne 100 % côté client — vos clés API, profils et préférences restent stockés uniquement dans le <code>localStorage</code> de votre navigateur.
+    </footer>
+  </main>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="settingsModalTitle" class="card-title">Paramètres API (Stockage local uniquement)</h2>
+          <p class="field-hint">Aucune clé n'est enregistrée dans le code ni envoyée à un serveur tiers.</p>
+        </div>
+        <button id="closeSettingsBtn" type="button" class="btn btn-icon" aria-label="Fermer les paramètres">✕</button>
+      </div>
+
+      <!-- Gemini API Key -->
+      <div class="section-block">
+        <label for="geminiKeyInput" class="field-label">
+          <span>Clé API Gemini</span>
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="field-hint" style="color:#ff8ea4;">Obtenir une clé ↗</a>
+        </label>
+        <div class="input-with-btn">
+          <input id="geminiKeyInput" type="password" class="input mono" placeholder="AIza..." autocomplete="off" />
+          <button id="toggleKeyVisibilityBtn" type="button" class="btn btn-sm" title="Afficher/Masquer">Voir</button>
+        </div>
+      </div>
+
+      <!-- Gemini Model -->
+      <div class="section-block">
+        <label for="geminiModelInput" class="field-label">
+          <span>Modèle Gemini</span>
+          <button id="fetchModelsBtn" type="button" class="btn btn-sm" style="padding: 3px 9px; font-size: 0.72rem;">Vérifier mes modèles</button>
+        </label>
+        <input id="geminiModelInput" type="text" class="input mono" placeholder="gemini-2.5-flash" />
+        <div id="modelPresets" class="chip-group" style="margin-top: 8px;"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Google OAuth Client ID -->
+      <div class="section-block">
+        <label for="googleClientIdInput" class="field-label">
+          <span>Google OAuth 2.0 Client ID</span>
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" class="field-hint" style="color:#c4b5fd;">Google Cloud Console ↗</a>
+        </label>
+        <input id="googleClientIdInput" type="text" class="input mono" placeholder="1234567890-abcdefg.apps.googleusercontent.com" autocomplete="off" />
+        <div class="origin-copy-row">
+          <span style="color: var(--text-secondary); flex-shrink:0;">Origine JS autorisée :</span>
+          <code id="currentOriginCode" style="flex:1; color:#e2e8f0;"></code>
+          <button id="copyOriginBtn" type="button" class="btn btn-sm">Copier</button>
+        </div>
+      </div>
+
+      <details class="guide-details">
+        <summary>Guide rapide Google Cloud Console (YouTube Data API v3)</summary>
+        <ol>
+          <li>Dans <strong>Google Cloud Console</strong>, activez l'API <strong>YouTube Data API v3</strong>.</li>
+          <li>Configurez l'<strong>Écran de consentement OAuth</strong> (type Externe) et ajoutez votre adresse Google dans les <em>Utilisateurs tests</em> si l'app est en mode Test.</li>
+          <li>Créez un identifiant <strong>ID client OAuth → Application Web</strong>.</li>
+          <li>Dans <strong>Origines JavaScript autorisées</strong>, collez l'origine affichée ci-dessus (sans slash final ni chemin).</li>
+          <li>Copiez le <strong>Client ID</strong> obtenu dans le champ ci-dessus et sauvegardez.</li>
+        </ol>
+      </details>
+
+      <div class="divider"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button id="clearSecretsBtn" type="button" class="btn btn-sm btn-danger-ghost">Effacer toutes les clés</button>
+        <div style="display:flex; gap:8px;">
+          <button id="cancelSettingsBtn" type="button" class="btn">Annuler</button>
+          <button id="saveSettingsBtn" type="button" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      /* =========================================================
+         CONSTANTS & LOCALSTORAGE KEYS
+      ========================================================= */
+      const STORAGE_KEYS = {
+        GEMINI_KEY: 'ytm_studio_gemini_key',
+        GEMINI_MODEL: 'ytm_studio_gemini_model',
+        GOOGLE_CLIENT_ID: 'ytm_studio_google_client_id',
+        PROFILES: 'ytm_studio_profiles',
+        LAST_CRITERIA: 'ytm_studio_last_criteria'
+      };
+
+      const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+      const MODEL_PRESETS = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-flash-latest'
+      ];
+
+      const OPTIONS = {
+        moods: [
+          'Énergique', 'Chill / Détendu', 'Euphorique', 'Mélancolique',
+          'Nostalgique', 'Focus / Zen', 'Sombre', 'Romantique',
+          'Solaire', 'Épique', 'Rêveur', 'Rebelle'
+        ],
+        contexts: [
+          'Travail / Deep Work', 'Sport / Running', 'Voiture / Trajet',
+          'Soirée / Apéro', 'Matin / Réveil', 'Nuit tardive',
+          'Maison / Cuisine', 'Lecture / Étude', 'Road trip'
+        ],
+        goals: [
+          'Rester concentré', 'Me booster', 'Décompresser',
+          'Mettre l\'ambiance', 'Découvrir des pépites',
+          'Chanter à tue-tête', 'M\'évader'
+        ],
+        eras: [
+          'Années 60-70', 'Années 80', 'Années 90',
+          'Années 2000', 'Années 2010', '2020 - Aujourd\'hui'
+        ],
+        languages: [
+          'Français', 'Anglais', 'Espagnol', 'Italien',
+          'Japonais', 'Coréen', 'Instrumental / Sans paroles'
+        ]
+      };
+
+      const STARTER_PROFILES = [
+        {
+          id: 'starter-deep-work',
+          name: 'Deep Work Nocturne',
+          criteria: {
+            moods: ['Focus / Zen', 'Rêveur'],
+            contexts: ['Travail / Deep Work', 'Nuit tardive'],
+            goals: ['Rester concentré'],
+            energy: 35,
+            discovery: 65,
+            useLiked: false,
+            likedMode: 'inspire',
+            eras: ['Années 2010', '2020 - Aujourd\'hui'],
+            languages: ['Instrumental / Sans paroles', 'Anglais'],
+            trackCount: 15,
+            exclusions: 'Pas de paroles trop bavardes, pas de hard rock ni de métal',
+            freeText: 'Ambiance électro cinématographique, synthés chaleureux, textures lo-fi/ambient propres et immersives.'
+          }
+        },
+        {
+          id: 'starter-running',
+          name: 'Running & Cardio Boost',
+          criteria: {
+            moods: ['Énergique', 'Euphorique'],
+            contexts: ['Sport / Running'],
+            goals: ['Me booster'],
+            energy: 88,
+            discovery: 40,
+            useLiked: true,
+            likedMode: 'mix',
+            eras: ['Années 2000', 'Années 2010', '2020 - Aujourd\'hui'],
+            languages: ['Anglais', 'Français'],
+            trackCount: 18,
+            exclusions: 'Aucune ballade lente, pas d\'intro de plus de 30 secondes',
+            freeText: 'Tempo soutenu entre 130 et 165 BPM, refrains percutants pour garder le rythme du début à la fin.'
+          }
+        },
+        {
+          id: 'starter-roadtrip',
+          name: 'Road Trip Solaire',
+          criteria: {
+            moods: ['Solaire', 'Nostalgique', 'Chill / Détendu'],
+            contexts: ['Road trip', 'Voiture / Trajet'],
+            goals: ['Chanter à tue-tête', 'M\'évader'],
+            energy: 62,
+            discovery: 45,
+            useLiked: true,
+            likedMode: 'mix',
+            eras: ['Années 80', 'Années 90', 'Années 2000', 'Années 2010'],
+            languages: ['Français', 'Anglais'],
+            trackCount: 20,
+            exclusions: 'Pas de morceaux tristes ou sombres',
+            freeText: 'Indie pop, funk, rock feel-good et classiques qui donnent envie d\'ouvrir les fenêtres.'
+          }
+        }
+      ];
+
+      /* =========================================================
+         APPLICATION STATE
+      ========================================================= */
+      const state = {
+        geminiKey: '',
+        geminiModel: DEFAULT_GEMINI_MODEL,
+        googleClientId: '',
+
+        // Google OAuth / YouTube state
+        accessToken: null,
+        tokenExpiresAt: 0,
+        tokenClient: null,
+        tokenClientIdUsed: null,
+        channelTitle: '',
+        likedTracks: [], // [{ videoId, title, artist, rawTitle, channelTitle }]
+        likedTracksLoaded: false,
+
+        // Profiles
+        profiles: [],
+
+        // Generated playlist preview
+        preview: null, // { playlistTitle, playlistDescription, tracks: [{ id, title, artist, year, reason, known, likedVideoId, status }] }
+        isGenerating: false,
+        isCreatingPlaylist: false
+      };
+
+      /* =========================================================
+         DOM ELEMENTS
+      ========================================================= */
+      const el = {
+        setupBanner: document.getElementById('setupBanner'),
+        bannerSettingsBtn: document.getElementById('bannerSettingsBtn'),
+        geminiStatusPill: document.getElementById('geminiStatusPill'),
+        geminiStatusText: document.getElementById('geminiStatusText'),
+        googleAuthBtn: document.getElementById('googleAuthBtn'),
+        googleAuthBtnText: document.getElementById('googleAuthBtnText'),
+        openSettingsBtn: document.getElementById('openSettingsBtn'),
+
+        // Profiles
+        profileSelect: document.getElementById('profileSelect'),
+        loadProfileBtn: document.getElementById('loadProfileBtn'),
+        saveProfileBtn: document.getElementById('saveProfileBtn'),
+        deleteProfileBtn: document.getElementById('deleteProfileBtn'),
+        resetCriteriaBtn: document.getElementById('resetCriteriaBtn'),
+
+        // Criteria groups
+        moodsGroup: document.getElementById('moodsGroup'),
+        contextGroup: document.getElementById('contextGroup'),
+        goalGroup: document.getElementById('goalGroup'),
+        erasGroup: document.getElementById('erasGroup'),
+        languagesGroup: document.getElementById('languagesGroup'),
+
+        energySlider: document.getElementById('energySlider'),
+        energyValueBadge: document.getElementById('energyValueBadge'),
+        discoverySlider: document.getElementById('discoverySlider'),
+        discoveryValueBadge: document.getElementById('discoveryValueBadge'),
+        trackCountSlider: document.getElementById('trackCountSlider'),
+        trackCountBadge: document.getElementById('trackCountBadge'),
+
+        useLikedToggle: document.getElementById('useLikedToggle'),
+        likedDetails: document.getElementById('likedDetails'),
+        likedStatusText: document.getElementById('likedStatusText'),
+        refreshLikedBtn: document.getElementById('refreshLikedBtn'),
+
+        exclusionsInput: document.getElementById('exclusionsInput'),
+        freeTextInput: document.getElementById('freeTextInput'),
+        generateBtn: document.getElementById('generateBtn'),
+        generateBtnText: document.getElementById('generateBtnText'),
+
+        // Preview
+        previewCountPill: document.getElementById('previewCountPill'),
+        previewCountText: document.getElementById('previewCountText'),
+        previewEmptyState: document.getElementById('previewEmptyState'),
+        previewContent: document.getElementById('previewContent'),
+        playlistTitleInput: document.getElementById('playlistTitleInput'),
+        playlistDescInput: document.getElementById('playlistDescInput'),
+        playlistPrivacySelect: document.getElementById('playlistPrivacySelect'),
+        trackList: document.getElementById('trackList'),
+
+        refineInput: document.getElementById('refineInput'),
+        refineBtn: document.getElementById('refineBtn'),
+        refineBtnText: document.getElementById('refineBtnText'),
+
+        createPlaylistBtn: document.getElementById('createPlaylistBtn'),
+        createPlaylistBtnText: document.getElementById('createPlaylistBtnText'),
+        creationProgressBox: document.getElementById('creationProgressBox'),
+        progressStatusLabel: document.getElementById('progressStatusLabel'),
+        progressPercentLabel: document.getElementById('progressPercentLabel'),
+        progressBarFill: document.getElementById('progressBarFill'),
+
+        creationResultBox: document.getElementById('creationResultBox'),
+        resultHeadline: document.getElementById('resultHeadline'),
+        resultSubtext: document.getElementById('resultSubtext'),
+        ytmDirectLink: document.getElementById('ytmDirectLink'),
+        ytClassicLink: document.getElementById('ytClassicLink'),
+
+        // Settings Modal
+        settingsModal: document.getElementById('settingsModal'),
+        closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+        cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
+        saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+        clearSecretsBtn: document.getElementById('clearSecretsBtn'),
+        geminiKeyInput: document.getElementById('geminiKeyInput'),
+        toggleKeyVisibilityBtn: document.getElementById('toggleKeyVisibilityBtn'),
+        geminiModelInput: document.getElementById('geminiModelInput'),
+        modelPresets: document.getElementById('modelPresets'),
+        fetchModelsBtn: document.getElementById('fetchModelsBtn'),
+        googleClientIdInput: document.getElementById('googleClientIdInput'),
+        currentOriginCode: document.getElementById('currentOriginCode'),
+        copyOriginBtn: document.getElementById('copyOriginBtn'),
+
+        toastContainer: document.getElementById('toastContainer')
+      };
+
+      /* =========================================================
+         UTILITIES
+      ========================================================= */
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalizeText(str) {
+        return String(str ?? '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\(.*?\)|\[.*?\]/g, ' ')
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function showToast(message, type = 'info', duration = 4200) {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const iconMap = {
+          success: '✅',
+          error: '❌',
+          warning: '⚠️',
+          info: '✨'
+        };
+        toast.innerHTML = `<span>${iconMap[type] || 'ℹ️'}</span><span>${escapeHtml(message)}</span>`;
+        el.toastContainer.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(8px)';
+          toast.style.transition = '200ms ease';
+          setTimeout(() => toast.remove(), 220);
+        }, duration);
+      }
+
+      function describeEnergy(val) {
+        const v = Number(val);
+        if (v <= 18) return `Très calme (${v}%)`;
+        if (v <= 38) return `Doux (${v}%)`;
+        if (v <= 62) return `Modéré (${v}%)`;
+        if (v <= 82) return `Entraînant (${v}%)`;
+        return `Explosif (${v}%)`;
+      }
+
+      function describeDiscovery(val) {
+        const v = Number(val);
+        if (v <= 15) return `Classiques & Hits (${v}%)`;
+        if (v <= 38) return `Plutôt connus (${v}%)`;
+        if (v <= 62) return `Équilibré (${v}%)`;
+        if (v <= 84) return `Riche en découvertes (${v}%)`;
+        return `Pépites rares (${v}%)`;
+      }
+
+      function isGoogleTokenValid() {
+        return Boolean(state.accessToken && Date.now() < state.tokenExpiresAt - 30000);
+      }
+
+      /* =========================================================
+         INIT CHIPS & UI
+      ========================================================= */
+      function renderChipGroup(container, items, extraClass = '') {
+        container.innerHTML = '';
+        items.forEach((label) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `chip ${extraClass}`.trim();
+          btn.dataset.value = label;
+          btn.textContent = label;
+          btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+            persistLastCriteria();
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      function getSelectedChips(container) {
+        return Array.from(container.querySelectorAll('.chip.active')).map((b) => b.dataset.value);
+      }
+
+      function setSelectedChips(container, values = []) {
+        const set = new Set(values);
+        container.querySelectorAll('.chip').forEach((b) => {
+          b.classList.toggle('active', set.has(b.dataset.value));
+        });
+      }
+
+      function renderModelPresets(models = MODEL_PRESETS) {
+        el.modelPresets.innerHTML = '';
+        models.forEach((modelName) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'chip violet';
+          if (el.geminiModelInput.value.trim() === modelName) {
+            btn.classList.add('active');
+          }
+          btn.textContent = modelName;
+          btn.addEventListener('click', () => {
+            el.geminiModelInput.value = modelName;
+            el.modelPresets.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'));
+            btn.classList.add('active');
+          });
+          el.modelPresets.appendChild(btn);
+        });
+      }
+
+      /* =========================================================
+         SETTINGS & LOCALSTORAGE
+      ========================================================= */
+      function loadSettings() {
+        state.geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
+        state.geminiModel = localStorage.getItem(STORAGE_KEYS.GEMINI_MODEL) || DEFAULT_GEMINI_MODEL;
+        state.googleClientId = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID) || '';
+        updateHeaderStatus();
+      }
+
+      function updateHeaderStatus() {
+        const hasGemini = Boolean(state.geminiKey && state.geminiModel);
+        const hasGoogle = Boolean(state.googleClientId);
+
+        if (hasGemini) {
+          el.geminiStatusPill.className = 'status-pill ok';
+          el.geminiStatusText.textContent = `Gemini · ${state.geminiModel}`;
+        } else {
+          el.geminiStatusPill.className = 'status-pill warn';
+          el.geminiStatusText.textContent = 'Gemini non configuré';
+        }
+
+        if (isGoogleTokenValid()) {
+          el.googleAuthBtn.classList.add('btn-success');
+          el.googleAuthBtnText.textContent = state.channelTitle
+            ? `Connecté · ${state.channelTitle}`
+            : 'YouTube connecté';
+        } else {
+          el.googleAuthBtn.classList.remove('btn-success');
+          el.googleAuthBtnText.textContent = hasGoogle ? 'Connexion YouTube' : 'Client ID requis';
+        }
+
+        el.setupBanner.classList.toggle('hidden', hasGemini && hasGoogle);
+      }
+
+      function openSettingsModal() {
+        el.geminiKeyInput.value = state.geminiKey;
+        el.geminiKeyInput.type = 'password';
+        el.toggleKeyVisibilityBtn.textContent = 'Voir';
+        el.geminiModelInput.value = state.geminiModel || DEFAULT_GEMINI_MODEL;
+        el.googleClientIdInput.value = state.googleClientId;
+        el.currentOriginCode.textContent = window.location.origin;
+        renderModelPresets();
+        el.settingsModal.classList.add('open');
+      }
+
+      function closeSettingsModal() {
+        el.settingsModal.classList.remove('open');
+      }
+
+      function saveSettings() {
+        const key = el.geminiKeyInput.value.trim();
+        const model = el.geminiModelInput.value.trim() || DEFAULT_GEMINI_MODEL;
+        const clientId = el.googleClientIdInput.value.trim();
+
+        if (key) localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, key);
+        else localStorage.removeItem(STORAGE_KEYS.GEMINI_KEY);
+
+        localStorage.setItem(STORAGE_KEYS.GEMINI_MODEL, model);
+
+        if (clientId) localStorage.setItem(STORAGE_KEYS.GOOGLE_CLIENT_ID, clientId);
+        else localStorage.removeItem(STORAGE_KEYS.GOOGLE_CLIENT_ID);
+
+        if (clientId !== state.googleClientId) {
+          state.tokenClient = null;
+          state.tokenClientIdUsed = null;
+        }
+
+        state.geminiKey = key;
+        state.geminiModel = model;
+        state.googleClientId = clientId;
+
+        updateHeaderStatus();
+        closeSettingsModal();
+        showToast('Paramètres sauvegardés dans le navigateur.', 'success');
+      }
+
+      function clearSecrets() {
+        if (!confirm('Supprimer votre clé API Gemini et votre Client ID Google du navigateur ?')) return;
+        localStorage.removeItem(STORAGE_KEYS.GEMINI_KEY);
+        localStorage.removeItem(STORAGE_KEYS.GOOGLE_CLIENT_ID);
+        state.geminiKey = '';
+        state.googleClientId = '';
+        state.accessToken = null;
+        state.tokenExpiresAt = 0;
+        state.channelTitle = '';
+        state.likedTracks = [];
+        state.likedTracksLoaded = false;
+        el.geminiKeyInput.value = '';
+        el.googleClientIdInput.value = '';
+        updateHeaderStatus();
+        updateLikedStatusUI();
+        showToast('Clés API effacées du navigateur.', 'info');
+      }
+
+      async function fetchAvailableGeminiModels() {
+        const key = el.geminiKeyInput.value.trim() || state.geminiKey;
+        if (!key) {
+          showToast('Saisissez d\'abord votre clé API Gemini.', 'warning');
+          return;
+        }
+        el.fetchModelsBtn.disabled = true;
+        el.fetchModelsBtn.textContent = 'Chargement...';
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+          );
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error?.message || `Erreur HTTP ${res.status}`);
+          }
+          const validModels = (data.models || [])
+            .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+            .map((m) => m.name.replace(/^models\//, ''))
+            .filter((name) => name.includes('gemini'))
+            .slice(0, 10);
+
+          if (validModels.length === 0) {
+            showToast('Aucun modèle Gemini compatible trouvé sur cette clé.', 'warning');
+          } else {
+            renderModelPresets(validModels);
+            showToast(`${validModels.length} modèles compatibles chargés.`, 'success');
+          }
+        } catch (err) {
+          showToast(`Impossible de lister les modèles : ${err.message}`, 'error');
+        } finally {
+          el.fetchModelsBtn.disabled = false;
+          el.fetchModelsBtn.textContent = 'Vérifier mes modèles';
+        }
+      }
+
+      /* =========================================================
+         CRITERIA & PROFILES (LOCALSTORAGE)
+      ========================================================= */
+      function collectCriteria() {
+        const likedModeEl = document.querySelector('input[name="likedMode"]:checked');
+        return {
+          moods: getSelectedChips(el.moodsGroup),
+          contexts: getSelectedChips(el.contextGroup),
+          goals: getSelectedChips(el.goalGroup),
+          energy: Number(el.energySlider.value),
+          discovery: Number(el.discoverySlider.value),
+          useLiked: el.useLikedToggle.checked,
+          likedMode: likedModeEl ? likedModeEl.value : 'mix',
+          eras: getSelectedChips(el.erasGroup),
+          languages: getSelectedChips(el.languagesGroup),
+          trackCount: Number(el.trackCountSlider.value),
+          exclusions: el.exclusionsInput.value.trim(),
+          freeText: el.freeTextInput.value.trim()
+        };
+      }
+
+      function applyCriteria(c) {
+        if (!c) return;
+        setSelectedChips(el.moodsGroup, c.moods || []);
+        setSelectedChips(el.contextGroup, c.contexts || []);
+        setSelectedChips(el.goalGroup, c.goals || []);
+        setSelectedChips(el.erasGroup, c.eras || []);
+        setSelectedChips(el.languagesGroup, c.languages || []);
+
+        el.energySlider.value = c.energy ?? 50;
+        el.discoverySlider.value = c.discovery ?? 50;
+        el.trackCountSlider.value = c.trackCount ?? 15;
+        updateSliderBadges();
+
+        el.useLikedToggle.checked = Boolean(c.useLiked);
+        el.likedDetails.classList.toggle('hidden', !el.useLikedToggle.checked);
+        const modeRadio = document.querySelector(`input[name="likedMode"][value="${c.likedMode || 'mix'}"]`);
+        if (modeRadio) modeRadio.checked = true;
+
+        el.exclusionsInput.value = c.exclusions || '';
+        el.freeTextInput.value = c.freeText || '';
+        persistLastCriteria();
+      }
+
+      function resetCriteria() {
+        applyCriteria({
+          moods: [],
+          contexts: [],
+          goals: [],
+          energy: 50,
+          discovery: 50,
+          useLiked: false,
+          likedMode: 'mix',
+          eras: [],
+          languages: [],
+          trackCount: 15,
+          exclusions: '',
+          freeText: ''
+        });
+        el.profileSelect.value = '';
+        showToast('Critères réinitialisés.', 'info');
+      }
+
+      function persistLastCriteria() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.LAST_CRITERIA, JSON.stringify(collectCriteria()));
+        } catch (_) {}
+      }
+
+      function loadProfiles() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.PROFILES);
+          if (raw) {
+            state.profiles = JSON.parse(raw);
+          } else {
+            state.profiles = STARTER_PROFILES.slice();
+            localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(state.profiles));
+          }
+        } catch (_) {
+          state.profiles = STARTER_PROFILES.slice();
+        }
+        renderProfileSelect();
+      }
+
+      function saveProfilesToStorage() {
+        localStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(state.profiles));
+        renderProfileSelect();
+      }
+
+      function renderProfileSelect(selectedId = '') {
+        const current = selectedId || el.profileSelect.value;
+        el.profileSelect.innerHTML = '<option value="">— Sélectionner un profil —</option>';
+        state.profiles.forEach((p) => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          el.profileSelect.appendChild(opt);
+        });
+        if (current && state.profiles.some((p) => p.id === current)) {
+          el.profileSelect.value = current;
+        }
+      }
+
+      function handleLoadProfile() {
+        const id = el.profileSelect.value;
+        if (!id) {
+          showToast('Sélectionnez un profil à charger.', 'warning');
+          return;
+        }
+        const profile = state.profiles.find((p) => p.id === id);
+        if (!profile) return;
+        applyCriteria(profile.criteria);
+        showToast(`Profil « ${profile.name} » chargé.`, 'success');
+      }
+
+      function handleSaveProfile() {
+        const selected = state.profiles.find((p) => p.id === el.profileSelect.value);
+        const suggestedName = selected ? selected.name : '';
+        const name = prompt('Nom du profil à sauvegarder :', suggestedName);
+        if (!name || !name.trim()) return;
+
+        const cleanName = name.trim();
+        const criteria = collectCriteria();
+        const existingIndex = state.profiles.findIndex(
+          (p) => p.name.toLowerCase() === cleanName.toLowerCase()
+        );
+
+        let savedId;
+        if (existingIndex >= 0) {
+          state.profiles[existingIndex].name = cleanName;
+          state.profiles[existingIndex].criteria = criteria;
+          state.profiles[existingIndex].updatedAt = Date.now();
+          savedId = state.profiles[existingIndex].id;
+        } else {
+          savedId = `prof-${Date.now()}`;
+          state.profiles.unshift({
+            id: savedId,
+            name: cleanName,
+            criteria,
+            updatedAt: Date.now()
+          });
+        }
+
+        saveProfilesToStorage();
+        renderProfileSelect(savedId);
+        showToast(`Profil « ${cleanName} » sauvegardé.`, 'success');
+      }
+
+      function handleDeleteProfile() {
+        const id = el.profileSelect.value;
+        if (!id) {
+          showToast('Sélectionnez un profil à supprimer.', 'warning');
+          return;
+        }
+        const profile = state.profiles.find((p) => p.id === id);
+        if (!profile) return;
+        if (!confirm(`Supprimer le profil « ${profile.name} » ?`)) return;
+
+        state.profiles = state.profiles.filter((p) => p.id !== id);
+        saveProfilesToStorage();
+        el.profileSelect.value = '';
+        showToast(`Profil « ${profile.name} » supprimé.`, 'info');
+      }
+
+      function updateSliderBadges() {
+        el.energyValueBadge.textContent = describeEnergy(el.energySlider.value);
+        el.discoveryValueBadge.textContent = describeDiscovery(el.discoverySlider.value);
+        el.trackCountBadge.textContent = `${el.trackCountSlider.value} titres`;
+      }
+
+      /* =========================================================
+         GOOGLE IDENTITY SERVICES (OAUTH 2.0) & YOUTUBE DATA API v3
+      ========================================================= */
+      function ensureGoogleAuth(interactivePrompt = '') {
+        return new Promise((resolve, reject) => {
+          if (isGoogleTokenValid()) {
+            resolve(state.accessToken);
+            return;
+          }
+
+          if (!state.googleClientId) {
+            openSettingsModal();
+            reject(new Error('Renseignez votre Google OAuth Client ID dans les paramètres.'));
+            return;
+          }
+
+          if (!window.google || !google.accounts || !google.accounts.oauth2) {
+            reject(new Error('Google Identity Services n\'est pas encore chargé. Vérifiez votre connexion internet et réessayez.'));
+            return;
+          }
+
+          if (!state.tokenClient || state.tokenClientIdUsed !== state.googleClientId) {
+            state.tokenClient = google.accounts.oauth2.initTokenClient({
+              client_id: state.googleClientId,
+              scope: 'https://www.googleapis.com/auth/youtube',
+              callback: () => {}
+            });
+            state.tokenClientIdUsed = state.googleClientId;
+          }
+
+          state.tokenClient.callback = async (tokenResponse) => {
+            if (tokenResponse.error) {
+              reject(new Error(`Authentification Google refusée : ${tokenResponse.error}`));
+              return;
+            }
+            state.accessToken = tokenResponse.access_token;
+            const expiresInSec = Number(tokenResponse.expires_in || 3500);
+            state.tokenExpiresAt = Date.now() + expiresInSec * 1000;
+
+            await fetchMyChannelInfo().catch(() => {});
+            updateHeaderStatus();
+            resolve(state.accessToken);
+          };
+
+          state.tokenClient.error_callback = (err) => {
+            reject(new Error(err?.message || 'Fenêtre de connexion Google fermée ou bloquée.'));
+          };
+
+          state.tokenClient.requestAccessToken({ prompt: interactivePrompt });
+        });
+      }
+
+      async function ytApiFetch(url, options = {}) {
+        const token = await ensureGoogleAuth();
+        const headers = new Headers(options.headers || {});
+        headers.set('Authorization', `Bearer ${token}`);
+        if (options.body && !headers.has('Content-Type')) {
+          headers.set('Content-Type', 'application/json');
+        }
+
+        const res = await fetch(url, { ...options, headers });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+          state.accessToken = null;
+          state.tokenExpiresAt = 0;
+          updateHeaderStatus();
+          throw new Error('Session Google expirée. Veuillez vous reconnecter.');
+        }
+
+        if (!res.ok) {
+          const reason = data?.error?.errors?.[0]?.reason || '';
+          if (reason === 'quotaExceeded') {
+            throw new Error('Quota quotidien YouTube Data API v3 atteint sur votre projet Google Cloud.');
+          }
+          throw new Error(data?.error?.message || `Erreur YouTube API (${res.status})`);
+        }
+        return data;
+      }
+
+      async function fetchMyChannelInfo() {
+        const data = await ytApiFetch(
+          'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true'
+        );
+        const item = data.items?.[0];
+        state.channelTitle = item?.snippet?.title || 'Connecté';
+      }
+
+      function cleanLikedTrackItem(item) {
+        const rawTitle = item.snippet?.title || '';
+        const channelTitle = (item.snippet?.channelTitle || '').replace(/\s*-\s*Topic$/i, '').trim();
+        let artist = channelTitle;
+        let title = rawTitle
+          .replace(/\(Official.*?\)|\[Official.*?\]|\(Audio\)|\[Audio\]|\(Lyrics.*?\)|\[Lyrics.*?\]|\(Clip.*?\)/gi, '')
+          .trim();
+
+        const sepMatch = title.match(/^(.+?)\s[-–—]\s(.+)$/);
+        if (sepMatch) {
+          artist = sepMatch[1].trim();
+          title = sepMatch[2].trim();
+        }
+
+        return {
+          videoId: item.id,
+          title,
+          artist,
+          rawTitle,
+          channelTitle
+        };
+      }
+
+      async function fetchLikedMusicTracks(force = false) {
+        if (state.likedTracksLoaded && !force && state.likedTracks.length > 0) {
+          return state.likedTracks;
+        }
+
+        el.refreshLikedBtn.disabled = true;
+        el.refreshLikedBtn.textContent = 'Chargement...';
+        el.likedStatusText.textContent = 'Lecture de vos titres aimés (catégorie Musique)...';
+
+        try {
+          await ensureGoogleAuth();
+          const collected = [];
+          let pageToken = '';
+          const maxPages = 4; // Jusqu'à 200 vidéos aimées récentes (seulement 4 unités de quota)
+
+          for (let page = 0; page < maxPages; page++) {
+            const params = new URLSearchParams({
+              part: 'snippet',
+              myRating: 'like',
+              maxResults: '50'
+            });
+            if (pageToken) params.set('pageToken', pageToken);
+
+            const data = await ytApiFetch(
+              `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`
+            );
+
+            for (const item of data.items || []) {
+              // Catégorie 10 = Musique sur YouTube
+              if (String(item.snippet?.categoryId) === '10') {
+                collected.push(cleanLikedTrackItem(item));
+              }
+            }
+
+            pageToken = data.nextPageToken || '';
+            if (!pageToken) break;
+          }
+
+          state.likedTracks = collected;
+          state.likedTracksLoaded = true;
+          updateLikedStatusUI();
+          showToast(`${collected.length} titres aimés (catégorie Musique) chargés.`, 'success');
+          return collected;
+        } catch (err) {
+          el.likedStatusText.textContent = `Erreur : ${err.message}`;
+          showToast(err.message, 'error');
+          throw err;
+        } finally {
+          el.refreshLikedBtn.disabled = false;
+          el.refreshLikedBtn.textContent = 'Charger / Rafraîchir';
+        }
+      }
+
+      function updateLikedStatusUI() {
+        if (state.likedTracksLoaded) {
+          el.likedStatusText.textContent = `🎵 ${state.likedTracks.length} titres musicaux aimés prêts à être analysés.`;
+        } else if (isGoogleTokenValid()) {
+          el.likedStatusText.textContent = 'Connecté à YouTube. Cliquez sur Charger pour importer vos titres aimés.';
+        } else {
+          el.likedStatusText.textContent = 'Connectez votre compte YouTube pour charger vos titres aimés.';
+        }
+      }
+
+      function findMatchingLikedVideoId(title, artist) {
+        if (!state.likedTracks.length) return null;
+        const normTitle = normalizeText(title);
+        const normArtist = normalizeText(artist);
+        if (!normTitle) return null;
+
+        for (const lt of state.likedTracks) {
+          const ltTitle = normalizeText(lt.title);
+          const ltArtist = normalizeText(lt.artist);
+          const ltRaw = normalizeText(lt.rawTitle);
+
+          const titleMatch =
+            ltTitle === normTitle ||
+            (normTitle.length > 4 && (ltTitle.includes(normTitle) || ltRaw.includes(normTitle)));
+
+          const artistMatch =
+            !normArtist ||
+            ltArtist === normArtist ||
+            ltArtist.includes(normArtist) ||
+            normArtist.includes(ltArtist) ||
+            ltRaw.includes(normArtist);
+
+          if (titleMatch && artistMatch) {
+            return lt.videoId;
+          }
+        }
+        return null;
+      }
+
+      /* =========================================================
+         GEMINI API INTEGRATION
+      ========================================================= */
+      function buildGeminiPrompt(criteria, likedSample, refinement = null) {
+        const likedSection = criteria.useLiked && likedSample.length > 0
+          ? `
+TITRES AIMÉS DE L'UTILISATEUR (échantillon YouTube Music, catégorie Musique) :
+${likedSample.map((t) => `- ${t.artist} — ${t.title}`).join('\n')}
+Consigne sur les titres aimés : ${
+  criteria.likedMode === 'inspire'
+    ? 'Inspire-toi de son ADN musical, mais NE RÉUTILISE PAS les morceaux exacts de cette liste.'
+    : 'Tu peux inclure quelques titres pertinents issus de cette liste (en accord avec les critères) et compléter avec des titres cohérents.'
+}`
+          : 'TITRES AIMÉS : Non utilisés.';
+
+        const refinementSection = refinement
+          ? `
+MODE AJUSTEMENT / RÉGÉNÉRATION :
+Voici la playlist actuellement retenue par l'utilisateur (après éventuelles suppressions) :
+Titre actuel : "${refinement.currentTitle}"
+Description actuelle : "${refinement.currentDescription}"
+Titres actuels (${refinement.currentTracks.length}) :
+${refinement.currentTracks.map((t, i) => `${i + 1}. ${t.artist} — ${t.title}`).join('\n')}
+
+DEMANDE D'AJUSTEMENT DE L'UTILISATEUR :
+"${refinement.instruction}"
+
+Applique précisément cet ajustement tout en respectant les critères généraux et les exclusions strictes. Sauf demande contraire dans l'ajustement, vise environ ${criteria.trackCount} titres au total et conserve les bons titres déjà présents si pertinent.`
+          : '';
+
+        return `Tu es un curateur musical d'élite spécialisé dans YouTube Music.
+Ta mission : composer une playlist cohérente, authentique, avec de vrais morceaux existants et facilement trouvables sur YouTube Music.
+
+CRITÈRES DE L'UTILISATEUR :
+- Humeurs : ${criteria.moods.length ? criteria.moods.join(', ') : 'Libre'}
+- Contexte : ${criteria.contexts.length ? criteria.contexts.join(', ') : 'Libre'}
+- Objectif : ${criteria.goals.length ? criteria.goals.join(', ') : 'Libre'}
+- Énergie / Tempo : ${criteria.energy}/100 (${describeEnergy(criteria.energy)})
+- Dosage Connus vs Découvertes : ${criteria.discovery}/100 (${describeDiscovery(criteria.discovery)} — 0 = hits très connus, 100 = pépites rares et découvertes)
+- Époques souhaitées : ${criteria.eras.length ? criteria.eras.join(', ') : 'Toutes époques'}
+- Langues souhaitées : ${criteria.languages.length ? criteria.languages.join(', ') : 'Toutes langues'}
+- Nombre exact de titres demandé : ${criteria.trackCount}
+- EXCLUSIONS STRICTES (à respecter impérativement) : ${criteria.exclusions || 'Aucune'}
+- Précisions libres de l'utilisateur : ${criteria.freeText || 'Aucune'}
+${likedSection}
+${refinementSection}
+
+RÈGLES STRICTES :
+1. Propose UNIQUEMENT de vraies chansons existantes (n'invente jamais de titres ni d'artistes).
+2. Évite les doublons et limite à maximum 2 morceaux par artiste (sauf si l'utilisateur demande un artiste précis).
+3. Soigne la progression (flow) entre les morceaux du début à la fin.
+4. Réponds UNIQUEMENT avec un objet JSON valide respectant exactement cette structure :
+{
+  "playlistTitle": "Un titre accrocheur et évocateur en français (max 60 caractères)",
+  "playlistDescription": "Une courte description inspirante en français (max 160 caractères)",
+  "tracks": [
+    {
+      "title": "Titre exact du morceau",
+      "artist": "Artiste principal",
+      "year": "Année (ex: 2019)",
+      "reason": "Raison concise du choix en français (max 12 mots)",
+      "known": true
+    }
+  ]
+}
+Note : "known" vaut true si c'est un titre relativement connu/classique, false si c'est plutôt une découverte/pépite.`;
+      }
+
+      function parseGeminiJson(rawText) {
+        let text = String(rawText || '').trim();
+        // Strip markdown fences if present
+        const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        if (fenceMatch) {
+          text = fenceMatch[1].trim();
+        }
+        try {
+          return JSON.parse(text);
+        } catch (_) {
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace > firstBrace) {
+            return JSON.parse(text.slice(firstBrace, lastBrace + 1));
+          }
+          throw new Error('Réponse JSON invalide reçue de Gemini.');
+        }
+      }
+
+      async function callGemini(prompt) {
+        if (!state.geminiKey) {
+          openSettingsModal();
+          throw new Error('Configurez votre clé API Gemini dans les paramètres.');
+        }
+
+        const model = state.geminiModel || DEFAULT_GEMINI_MODEL;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(state.geminiKey)}`;
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.85,
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error?.message || `Erreur Gemini API (${res.status})`);
+        }
+
+        const candidateText = data.candidates?.[0]?.content?.parts
+          ?.map((p) => p.text || '')
+          .join('')
+          .trim();
+
+        if (!candidateText) {
+          throw new Error('Gemini n\'a renvoyé aucun contenu. Essayez un autre modèle ou reformulez vos critères.');
+        }
+
+        const parsed = parseGeminiJson(candidateText);
+        if (!parsed || !Array.isArray(parsed.tracks) || parsed.tracks.length === 0) {
+          throw new Error('Aucun titre exploitable trouvé dans la réponse Gemini.');
+        }
+
+        return parsed;
+      }
+
+      async function generatePlaylistPreview(isRefinement = false) {
+        if (state.isGenerating || state.isCreatingPlaylist) return;
+
+        const criteria = collectCriteria();
+        let refinementPayload = null;
+
+        if (isRefinement) {
+          const instruction = el.refineInput.value.trim();
+          if (!instruction) {
+            showToast('Indiquez comment ajuster la playlist (ex : « Plus rythmé »).', 'warning');
+            el.refineInput.focus();
+            return;
+          }
+          refinementPayload = {
+            instruction,
+            currentTitle: el.playlistTitleInput.value.trim() || state.preview?.playlistTitle || '',
+            currentDescription: el.playlistDescInput.value.trim() || state.preview?.playlistDescription || '',
+            currentTracks: state.preview?.tracks || []
+          };
+        }
+
+        state.isGenerating = true;
+        setGenerationLoadingUI(true, isRefinement);
+
+        try {
+          // If liked tracks toggle is enabled, fetch them if not loaded yet
+          let likedSample = [];
+          if (criteria.useLiked) {
+            if (!state.likedTracksLoaded) {
+              try {
+                await fetchLikedMusicTracks(false);
+              } catch (_) {
+                showToast('Poursuite de la génération sans vos titres aimés.', 'warning');
+              }
+            }
+            // Take up to 80 recent liked music tracks to keep prompt focused
+            likedSample = state.likedTracks.slice(0, 80);
+          }
+
+          const prompt = buildGeminiPrompt(criteria, likedSample, refinementPayload);
+          const result = await callGemini(prompt);
+
+          const normalizedTracks = result.tracks
+            .filter((t) => t && t.title && t.artist)
+            .map((t, idx) => ({
+              id: `trk-${Date.now()}-${idx}`,
+              title: String(t.title).trim(),
+              artist: String(t.artist).trim(),
+              year: t.year ? String(t.year).trim() : '',
+              reason: t.reason ? String(t.reason).trim() : '',
+              known: t.known !== false,
+              likedVideoId: findMatchingLikedVideoId(t.title, t.artist),
+              status: 'idle' // idle | searching | added | failed
+            }));
+
+          state.preview = {
+            playlistTitle: String(result.playlistTitle || 'Ma Playlist YTM Studio').trim(),
+            playlistDescription: String(result.playlistDescription || 'Générée avec YTM Studio & Gemini AI').trim(),
+            tracks: normalizedTracks
+          };
+
+          el.creationProgressBox.classList.add('hidden');
+          el.creationResultBox.classList.add('hidden');
+          if (isRefinement) el.refineInput.value = '';
+
+          renderPreview();
+          showToast(
+            isRefinement
+              ? `Playlist ajustée (${normalizedTracks.length} titres).`
+              : `Prévisualisation prête : ${normalizedTracks.length} titres proposés !`,
+            'success'
+          );
+
+          // On mobile, scroll smoothly to preview
+          if (window.innerWidth <= 1040) {
+            el.previewContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        } catch (err) {
+          showToast(err.message, 'error', 6000);
+        } finally {
+          state.isGenerating = false;
+          setGenerationLoadingUI(false, isRefinement);
+        }
+      }
+
+      function setGenerationLoadingUI(loading, isRefinement) {
+        el.generateBtn.disabled = loading;
+        el.refineBtn.disabled = loading;
+        el.createPlaylistBtn.disabled = loading;
+
+        if (loading && !isRefinement) {
+          el.generateBtnText.innerHTML = '<span class="spinner"></span> Composition en cours avec Gemini...';
+        } else {
+          el.generateBtnText.textContent = 'Générer la prévisualisation';
+        }
+
+        if (loading && isRefinement) {
+          el.refineBtnText.innerHTML = '<span class="spinner"></span>';
+        } else {
+          el.refineBtnText.textContent = 'Ajuster';
+        }
+      }
+
+      /* =========================================================
+         PREVIEW RENDERING & TRACK MANAGEMENT
+      ========================================================= */
+      function renderPreview() {
+        if (!state.preview || state.preview.tracks.length === 0) {
+          el.previewEmptyState.classList.remove('hidden');
+          el.previewContent.classList.add('hidden');
+          el.previewCountPill.classList.add('hidden');
+          return;
+        }
+
+        el.previewEmptyState.classList.add('hidden');
+        el.previewContent.classList.remove('hidden');
+        el.previewCountPill.classList.remove('hidden');
+        el.previewCountText.textContent = `${state.preview.tracks.length} titres`;
+
+        el.playlistTitleInput.value = state.preview.playlistTitle;
+        el.playlistDescInput.value = state.preview.playlistDescription;
+
+        const prevScrollTop = el.trackList.scrollTop;
+        el.trackList.innerHTML = '';
+        state.preview.tracks.forEach((track, idx) => {
+          const item = document.createElement('div');
+          item.className = `track-item${track.status !== 'idle' ? ` status-${track.status}` : ''}`;
+          item.dataset.trackId = track.id;
+          item.setAttribute('role', 'listitem');
+
+          let statusIndicator = String(idx + 1).padStart(2, '0');
+          if (track.status === 'searching') statusIndicator = '<span class="spinner" style="width:13px;height:13px;"></span>';
+          else if (track.status === 'added') statusIndicator = '✓';
+          else if (track.status === 'failed') statusIndicator = '⚠';
+
+          const ytmSearchUrl = `https://music.youtube.com/search?q=${encodeURIComponent(`${track.artist} ${track.title}`)}`;
+
+          item.innerHTML = `
+            <div class="track-index">${statusIndicator}</div>
+            <div class="track-info">
+              <div class="track-title" title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</div>
+              <div class="track-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}${track.year ? ` · ${escapeHtml(track.year)}` : ''}</div>
+              ${track.reason ? `<div class="track-reason">${escapeHtml(track.reason)}</div>` : ''}
+              <div class="track-badges">
+                <span class="mini-badge ${track.known ? '' : 'discovery'}">${track.known ? 'Connu' : 'Découverte'}</span>
+                ${track.likedVideoId ? '<span class="mini-badge liked">♥ Titre aimé</span>' : ''}
+              </div>
+            </div>
+            <div class="track-actions">
+              <a href="${ytmSearchUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-icon" title="Écouter/chercher sur YouTube Music" aria-label="Chercher sur YouTube Music">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              </a>
+              <button type="button" class="btn btn-icon btn-danger-ghost remove-track-btn" data-id="${escapeHtml(track.id)}" title="Supprimer ce titre" aria-label="Supprimer ce titre" ${state.isCreatingPlaylist ? 'disabled' : ''}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          `;
+
+          el.trackList.appendChild(item);
+        });
+
+        el.trackList.querySelectorAll('.remove-track-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (state.isCreatingPlaylist) return;
+            const id = btn.dataset.id;
+            state.preview.tracks = state.preview.tracks.filter((t) => t.id !== id);
+            renderPreview();
+          });
+        });
+
+        el.trackList.scrollTop = prevScrollTop;
+      }
+
+      /* =========================================================
+         STEP 2: CREATE PLAYLIST ON YOUTUBE MUSIC
+      ========================================================= */
+      async function searchTrackVideoId(track) {
+        if (track.likedVideoId) {
+          return track.likedVideoId;
+        }
+
+        const query = `${track.artist} ${track.title}`;
+        const baseParams = {
+          part: 'snippet',
+          type: 'video',
+          maxResults: '1',
+          q: query
+        };
+
+        // Premier essai dans la catégorie Musique (10)
+        const musicParams = new URLSearchParams({ ...baseParams, videoCategoryId: '10' });
+        const musicRes = await ytApiFetch(
+          `https://www.googleapis.com/youtube/v3/search?${musicParams.toString()}`
+        );
+        if (musicRes.items?.[0]?.id?.videoId) {
+          return musicRes.items[0].id.videoId;
+        }
+
+        // Repli sans filtre catégorie si rien trouvé
+        const fallbackParams = new URLSearchParams(baseParams);
+        const fallbackRes = await ytApiFetch(
+          `https://www.googleapis.com/youtube/v3/search?${fallbackParams.toString()}`
+        );
+        return fallbackRes.items?.[0]?.id?.videoId || null;
+      }
+
+      function updateProgress(percent, label) {
+        const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+        el.progressBarFill.style.width = `${clamped}%`;
+        el.progressPercentLabel.textContent = `${clamped}%`;
+        el.progressStatusLabel.textContent = label;
+      }
+
+      async function createPlaylistOnYouTubeMusic() {
+        if (state.isCreatingPlaylist || !state.preview || state.preview.tracks.length === 0) return;
+
+        const title = el.playlistTitleInput.value.trim() || 'Playlist YTM Studio';
+        const description = el.playlistDescInput.value.trim() || 'Créée avec YTM Studio';
+        const privacyStatus = el.playlistPrivacySelect.value || 'private';
+
+        state.preview.playlistTitle = title;
+        state.preview.playlistDescription = description;
+
+        state.isCreatingPlaylist = true;
+        el.createPlaylistBtn.disabled = true;
+        el.generateBtn.disabled = true;
+        el.refineBtn.disabled = true;
+        el.createPlaylistBtnText.innerHTML = '<span class="spinner"></span> Création sur YouTube Music...';
+        el.creationResultBox.classList.add('hidden');
+        el.creationProgressBox.classList.remove('hidden');
+
+        // Reset track statuses
+        state.preview.tracks.forEach((t) => { t.status = 'idle'; });
+        renderPreview();
+        updateProgress(4, 'Connexion à votre compte YouTube...');
+
+        try {
+          await ensureGoogleAuth();
+
+          updateProgress(10, `Création de la playlist « ${title} »...`);
+          const createdPlaylist = await ytApiFetch(
+            'https://www.googleapis.com/youtube/v3/playlists?part=snippet,status',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                snippet: { title, description },
+                status: { privacyStatus }
+              })
+            }
+          );
+
+          const playlistId = createdPlaylist.id;
+          if (!playlistId) {
+            throw new Error('Impossible de récupérer l\'identifiant de la playlist créée.');
+          }
+
+          const tracks = state.preview.tracks;
+          let addedCount = 0;
+          const notFound = [];
+
+          for (let i = 0; i < tracks.length; i++) {
+            const track = tracks[i];
+            track.status = 'searching';
+            renderPreview();
+
+            const pctStart = 12 + ((i / tracks.length) * 86);
+            updateProgress(pctStart, `Recherche & ajout (${i + 1}/${tracks.length}) : ${track.artist} — ${track.title}`);
+
+            try {
+              const videoId = await searchTrackVideoId(track);
+              if (!videoId) {
+                track.status = 'failed';
+                notFound.push(`${track.artist} — ${track.title}`);
+                renderPreview();
+                continue;
+              }
+
+              await ytApiFetch(
+                'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    snippet: {
+                      playlistId,
+                      resourceId: {
+                        kind: 'youtube#video',
+                        videoId
+                      }
+                    }
+                  })
+                }
+              );
+
+              track.status = 'added';
+              addedCount++;
+              renderPreview();
+            } catch (trackErr) {
+              track.status = 'failed';
+              notFound.push(`${track.artist} — ${track.title}`);
+              renderPreview();
+              // Stop immediately on quota or auth failure
+              if (trackErr.message.includes('Quota') || trackErr.message.includes('expirée')) {
+                throw trackErr;
+              }
+            }
+          }
+
+          updateProgress(100, `Terminé ! ${addedCount}/${tracks.length} titres ajoutés.`);
+
+          const ytmUrl = `https://music.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+          const ytUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+
+          el.ytmDirectLink.href = ytmUrl;
+          el.ytClassicLink.href = ytUrl;
+          el.resultHeadline.textContent = `Playlist « ${title} » créée sur YouTube Music !`;
+          el.resultSubtext.textContent = notFound.length > 0
+            ? `${addedCount} titres sur ${tracks.length} ajoutés. Introuvables ou ignorés : ${notFound.join(', ')}.`
+            : `${addedCount} titres sur ${tracks.length} ajoutés avec succès.`;
+
+          el.creationResultBox.classList.remove('hidden');
+          showToast(`Playlist créée avec ${addedCount}/${tracks.length} titres !`, 'success', 5500);
+        } catch (err) {
+          updateProgress(0, `Échec : ${err.message}`);
+          showToast(err.message, 'error', 6500);
+        } finally {
+          state.isCreatingPlaylist = false;
+          el.createPlaylistBtn.disabled = false;
+          el.generateBtn.disabled = false;
+          el.refineBtn.disabled = false;
+          el.createPlaylistBtnText.textContent = 'Créer la playlist sur YouTube Music';
+          renderPreview();
+        }
+      }
+
+      /* =========================================================
+         EVENT LISTENERS & BOOTSTRAP
+      ========================================================= */
+      function bindEvents() {
+        // Settings modal
+        el.openSettingsBtn.addEventListener('click', openSettingsModal);
+        el.bannerSettingsBtn.addEventListener('click', openSettingsModal);
+        el.closeSettingsBtn.addEventListener('click', closeSettingsModal);
+        el.cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+        el.saveSettingsBtn.addEventListener('click', saveSettings);
+        el.clearSecretsBtn.addEventListener('click', clearSecrets);
+        el.fetchModelsBtn.addEventListener('click', fetchAvailableGeminiModels);
+
+        el.settingsModal.addEventListener('click', (e) => {
+          if (e.target === el.settingsModal) closeSettingsModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && el.settingsModal.classList.contains('open')) {
+            closeSettingsModal();
+          }
+        });
+
+        el.toggleKeyVisibilityBtn.addEventListener('click', () => {
+          const isPwd = el.geminiKeyInput.type === 'password';
+          el.geminiKeyInput.type = isPwd ? 'text' : 'password';
+          el.toggleKeyVisibilityBtn.textContent = isPwd ? 'Masquer' : 'Voir';
+        });
+
+        el.copyOriginBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(window.location.origin);
+            showToast(`Origine copiée : ${window.location.origin}`, 'success');
+          } catch (_) {
+            showToast('Copie impossible automatiquement — sélectionnez le texte manuellement.', 'warning');
+          }
+        });
+
+        // Google Auth button
+        el.googleAuthBtn.addEventListener('click', async () => {
+          if (isGoogleTokenValid()) {
+            if (confirm('Déconnecter votre session YouTube actuelle ?')) {
+              const tokenToRevoke = state.accessToken;
+              state.accessToken = null;
+              state.tokenExpiresAt = 0;
+              state.channelTitle = '';
+              state.likedTracks = [];
+              state.likedTracksLoaded = false;
+              if (window.google?.accounts?.oauth2?.revoke && tokenToRevoke) {
+                google.accounts.oauth2.revoke(tokenToRevoke, () => {});
+              }
+              updateHeaderStatus();
+              updateLikedStatusUI();
+              showToast('Session YouTube déconnectée.', 'info');
+            }
+            return;
+          }
+
+          try {
+            await ensureGoogleAuth('select_account');
+            showToast(`Connecté à YouTube (${state.channelTitle || 'OK'}).`, 'success');
+            updateLikedStatusUI();
+            if (el.useLikedToggle.checked && !state.likedTracksLoaded) {
+              fetchLikedMusicTracks(false).catch(() => {});
+            }
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        });
+
+        // Profiles
+        el.loadProfileBtn.addEventListener('click', handleLoadProfile);
+        el.saveProfileBtn.addEventListener('click', handleSaveProfile);
+        el.deleteProfileBtn.addEventListener('click', handleDeleteProfile);
+        el.resetCriteriaBtn.addEventListener('click', resetCriteria);
+
+        // Sliders
+        [el.energySlider, el.discoverySlider, el.trackCountSlider].forEach((slider) => {
+          slider.addEventListener('input', () => {
+            updateSliderBadges();
+            persistLastCriteria();
+          });
+        });
+
+        // Liked tracks toggle
+        el.useLikedToggle.addEventListener('change', () => {
+          const checked = el.useLikedToggle.checked;
+          el.likedDetails.classList.toggle('hidden', !checked);
+          persistLastCriteria();
+          updateLikedStatusUI();
+          if (checked && isGoogleTokenValid() && !state.likedTracksLoaded) {
+            fetchLikedMusicTracks(false).catch(() => {});
+          }
+        });
+
+        el.refreshLikedBtn.addEventListener('click', () => {
+          fetchLikedMusicTracks(true).catch(() => {});
+        });
+
+        document.querySelectorAll('input[name="likedMode"]').forEach((r) => {
+          r.addEventListener('change', persistLastCriteria);
+        });
+
+        el.exclusionsInput.addEventListener('input', persistLastCriteria);
+        el.freeTextInput.addEventListener('input', persistLastCriteria);
+
+        // Playlist metadata edits
+        el.playlistTitleInput.addEventListener('input', () => {
+          if (state.preview) state.preview.playlistTitle = el.playlistTitleInput.value;
+        });
+        el.playlistDescInput.addEventListener('input', () => {
+          if (state.preview) state.preview.playlistDescription = el.playlistDescInput.value;
+        });
+
+        // Generation & Refinement
+        el.generateBtn.addEventListener('click', () => generatePlaylistPreview(false));
+        el.refineBtn.addEventListener('click', () => generatePlaylistPreview(true));
+        el.refineInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            generatePlaylistPreview(true);
+          }
+        });
+
+        // Step 2: Create on YouTube Music
+        el.createPlaylistBtn.addEventListener('click', createPlaylistOnYouTubeMusic);
+      }
+
+      function init() {
+        renderChipGroup(el.moodsGroup, OPTIONS.moods);
+        renderChipGroup(el.contextGroup, OPTIONS.contexts);
+        renderChipGroup(el.goalGroup, OPTIONS.goals, 'violet');
+        renderChipGroup(el.erasGroup, OPTIONS.eras);
+        renderChipGroup(el.languagesGroup, OPTIONS.languages, 'violet');
+
+        loadSettings();
+        loadProfiles();
+
+        // Restore last criteria if present
+        try {
+          const last = localStorage.getItem(STORAGE_KEYS.LAST_CRITERIA);
+          if (last) applyCriteria(JSON.parse(last));
+          else updateSliderBadges();
+        } catch (_) {
+          updateSliderBadges();
+        }
+
+        updateLikedStatusUI();
+        bindEvents();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
